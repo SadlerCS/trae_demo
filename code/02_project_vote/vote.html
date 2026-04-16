@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在线投票程序</title>
+    <style>
+        /* 全局样式 */
+        :root {
+            --primary-color: #5d9cec; /* 浅蓝色 */
+            --bg-color: #f5f7fa; /* 浅灰色背景 */
+            --card-bg: #ffffff;
+            --text-color: #4a4a4a;
+            --border-color: #e6e9ed;
+            --danger-color: #ed5565;
+            --success-color: #48cfad;
+        }
+
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* 卡片布局 */
+        .container {
+            background-color: var(--card-bg);
+            width: 100%;
+            max-width: 500px;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 30px;
+            color: var(--primary-color);
+        }
+
+        /* 表单与输入框 */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        /* 按钮样式 */
+        .btn {
+            cursor: pointer;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+            width: 100%;
+        }
+
+        .btn-secondary {
+            background-color: #f1f3f5;
+            color: var(--text-color);
+            margin-top: 10px;
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            box-shadow: none;
+        }
+
+        /* 动态选项样式 */
+        .option-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .option-item input {
+            flex: 1;
+        }
+
+        /* 投票展示样式 */
+        .vote-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .vote-item:hover:not(.disabled) {
+            border-color: var(--primary-color);
+            background-color: #f0f7ff;
+        }
+
+        .vote-item.disabled {
+            cursor: default;
+        }
+
+        .vote-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+
+        /* 进度条效果 */
+        .progress-bar {
+            height: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: var(--primary-color);
+            width: 0%;
+            transition: width 0.6s cubic-bezier(0.1, 0.5, 0.1, 1);
+        }
+
+        .voted-badge {
+            display: inline-block;
+            background-color: var(--success-color);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+
+        /* 底部操作 */
+        .footer-actions {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px dashed var(--border-color);
+            display: flex;
+            justify-content: center;
+        }
+
+        /* 隐藏元素 */
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="setup-view">
+        <h1>创建新投票</h1>
+        <div class="form-group">
+            <label for="vote-title">投票标题</label>
+            <input type="text" id="vote-title" placeholder="请输入投票主题">
+        </div>
+        <div class="form-group">
+            <label>投票选项（至少2个）</label>
+            <div id="options-container">
+                <!-- 初始选项 -->
+                <div class="option-item">
+                    <input type="text" class="option-input" placeholder="选项 1">
+                </div>
+                <div class="option-item">
+                    <input type="text" class="option-input" placeholder="选项 2">
+                </div>
+            </div>
+            <button class="btn btn-outline btn-secondary" style="width: 100%; margin-top: 15px;" id="add-option-btn">+ 添加选项</button>
+        </div>
+        <button class="btn btn-primary" id="start-vote-btn" style="margin-top: 20px;">开始投票</button>
+    </div>
+
+    <div id="voting-view" class="hidden">
+        <h1 id="display-title">投票进行中</h1>
+        <div id="vote-list">
+            <!-- 投票列表将由 JS 渲染 -->
+        </div>
+        <div id="voted-msg" class="hidden" style="text-align: center; color: var(--success-color); margin-top: 15px; font-weight: bold;">
+            您已完成投票，感谢参与！
+        </div>
+        <div class="footer-actions">
+            <button class="btn btn-danger btn-sm" id="reset-vote-btn">重置投票</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- 数据持久化与状态管理 ---
+    const STORAGE_KEY = 'online_vote_data';
+    const VOTED_KEY_PREFIX = 'has_voted_';
+
+    let voteData = {
+        title: '',
+        options: [] // 每个对象包含 { id, text, count }
+    };
+
+    // --- DOM 元素 ---
+    const setupView = document.getElementById('setup-view');
+    const votingView = document.getElementById('voting-view');
+    const optionsContainer = document.getElementById('options-container');
+    const addOptionBtn = document.getElementById('add-option-btn');
+    const startVoteBtn = document.getElementById('start-vote-btn');
+    const resetVoteBtn = document.getElementById('reset-vote-btn');
+    const voteTitleInput = document.getElementById('vote-title');
+    const displayTitle = document.getElementById('display-title');
+    const voteList = document.getElementById('vote-list');
+    const votedMsg = document.getElementById('voted-msg');
+
+    // --- 初始化 ---
+    function init() {
+        const savedData = localStorage.getItem(STORAGE_KEY);
+        if (savedData) {
+            voteData = JSON.parse(savedData);
+            showVotingView();
+        } else {
+            showSetupView();
+        }
+    }
+
+    // --- 视图切换 ---
+    function showSetupView() {
+        setupView.classList.remove('hidden');
+        votingView.classList.add('hidden');
+        resetSetupForm();
+    }
+
+    function showVotingView() {
+        setupView.classList.add('hidden');
+        votingView.classList.remove('hidden');
+        displayTitle.textContent = voteData.title;
+        renderVoteList();
+    }
+
+    function resetSetupForm() {
+        voteTitleInput.value = '';
+        optionsContainer.innerHTML = `
+            <div class="option-item">
+                <input type="text" class="option-input" placeholder="选项 1">
+            </div>
+            <div class="option-item">
+                <input type="text" class="option-input" placeholder="选项 2">
+            </div>
+        `;
+    }
+
+    // --- 逻辑处理 ---
+
+    // 添加选项
+    addOptionBtn.addEventListener('click', () => {
+        const div = document.createElement('div');
+        div.className = 'option-item';
+        const index = optionsContainer.children.length + 1;
+        div.innerHTML = `
+            <input type="text" class="option-input" placeholder="选项 ${index}">
+            <button class="btn btn-danger btn-sm remove-option" onclick="this.parentElement.remove()">删除</button>
+        `;
+        optionsContainer.appendChild(div);
+    });
+
+    // 开始投票
+    startVoteBtn.addEventListener('click', () => {
+        const title = voteTitleInput.value.trim();
+        const inputs = Array.from(document.querySelectorAll('.option-input'));
+        const optionTexts = inputs.map(input => input.value.trim()).filter(text => text !== '');
+
+        if (!title) {
+            alert('请输入投票标题！');
+            return;
+        }
+        if (optionTexts.length < 2) {
+            alert('请至少输入 2 个有效的投票选项！');
+            return;
+        }
+
+        voteData = {
+            id: Date.now().toString(), // 唯一投票 ID，用于区分不同投票的重复检查
+            title: title,
+            options: optionTexts.map((text, index) => ({
+                id: index,
+                text: text,
+                count: 0
+            }))
+        };
+
+        saveData();
+        showVotingView();
+    });
+
+    // 渲染投票列表
+    function renderVoteList() {
+        const totalVotes = voteData.options.reduce((sum, opt) => sum + opt.count, 0);
+        const hasVoted = localStorage.getItem(VOTED_KEY_PREFIX + voteData.id);
+
+        voteList.innerHTML = '';
+        votedMsg.classList.toggle('hidden', !hasVoted);
+
+        voteData.options.forEach(option => {
+            const percentage = totalVotes === 0 ? 0 : Math.round((option.count / totalVotes) * 100);
+            
+            const item = document.createElement('div');
+            item.className = `vote-item ${hasVoted ? 'disabled' : ''}`;
+            item.innerHTML = `
+                <div class="vote-info">
+                    <span>${option.text}</span>
+                    <span>${option.count} 票 (${percentage}%)</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${percentage}%"></div>
+                </div>
+            `;
+
+            if (!hasVoted) {
+                item.addEventListener('click', () => handleVote(option.id));
+            }
+            voteList.appendChild(item);
+        });
+    }
+
+    // 投票操作
+    function handleVote(optionId) {
+        if (localStorage.getItem(VOTED_KEY_PREFIX + voteData.id)) return;
+
+        const option = voteData.options.find(opt => opt.id === optionId);
+        if (option) {
+            option.count++;
+            localStorage.setItem(VOTED_KEY_PREFIX + voteData.id, 'true');
+            saveData();
+            renderVoteList();
+        }
+    }
+
+    // 保存数据
+    function saveData() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(voteData));
+    }
+
+    // 重置投票
+    resetVoteBtn.addEventListener('click', () => {
+        if (confirm('确定要重置吗？这会清空当前投票的所有数据。')) {
+            // 注意：这里我们不删除旧投票的已投状态，但因为新投票会生成新 ID，所以不会影响
+            localStorage.removeItem(STORAGE_KEY);
+            showSetupView();
+        }
+    });
+
+    // 启动
+    init();
+</script>
+
+</body>
+</html>

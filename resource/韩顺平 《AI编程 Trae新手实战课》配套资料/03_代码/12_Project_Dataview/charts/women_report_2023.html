@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>中国女性职业发展报告（2023版）可视化</title>
+  <!-- Tailwind CSS CDN（启用 darkMode: 'class'） -->
+  <script>
+    // Tailwind 配置：启用类选择的暗色模式
+    window.tailwind = { config: { darkMode: 'class' } };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- ECharts（用于图表可视化） -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <!-- 页面基础样式，参考 Linear App 的简约现代风格 -->
+  <style>
+    /* 视觉优化：滚动与字体 */
+    html { scroll-behavior: smooth; }
+    body { font-feature-settings: "kern"; }
+    /* 卡片阴影与圆角风格 */
+    .card { border-radius: 16px; box-shadow: 0 6px 20px rgba(0,0,0,0.06); }
+    .card-dark { box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  </style>
+</head>
+<body class="bg-white text-neutral-800 dark:bg-neutral-900 dark:text-neutral-100 transition-colors">
+  <!-- 顶部导航与主题切换 -->
+  <header class="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-white/70 dark:supports-[backdrop-filter]:bg-neutral-900/70 border-b border-neutral-200 dark:border-neutral-800">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="inline-block w-8 h-8 bg-gradient-to-br from-indigo-500 via-sky-500 to-emerald-400 rounded-lg"></span>
+        <h1 class="text-lg sm:text-xl font-semibold">中国女性职业发展报告（2023版）</h1>
+      </div>
+      <div class="flex items-center gap-2">
+        <!-- 主题切换按钮：默认跟随系统，可手动切换覆盖 -->
+        <button id="themeToggle" class="px-3 py-2 rounded-md border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-sm">
+          切换主题
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 页面内容容器 -->
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-10">
+    <!-- 摘要 -->
+    <section id="abstract" class="space-y-4">
+      <h2 class="text-2xl font-semibold tracking-tight">摘要</h2>
+      <div class="card dark:card-dark bg-white dark:bg-neutral-800 p-6 leading-relaxed">
+        <!-- 摘要内容：保持原文核心信息并优化可读性 -->
+        <p>本报告基于全国人口普查及国际机构数据，对中国女性的受教育程度、就业状况、薪酬差异、职业发展与女性地位进行了系统分析，并与主要国家进行对比。</p>
+        <ul class="mt-4 list-disc pl-6 space-y-2">
+          <li>20-49岁群体中，高等教育总体性别差距不大：大专与博士男性占比高于女性，本科与硕士女性占比高于男性。</li>
+          <li>中国15-64岁女性劳动参与率长期高于世界平均，但1990年到2019年呈下降（79.39% → 68.57%）。</li>
+          <li>中国女性董事比例为13.8%，低于多数欧洲国家，高于部分东亚国家。</li>
+          <li>生育与职业发展存在冲突，子女数与女性就业几率、工资水平负相关。</li>
+          <li>提出十项政策建议以缓解女性职业与生育冲突，促进女性友好型社会建设。</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 关键指标卡片 -->
+    <section id="highlights" class="space-y-4">
+      <h2 class="text-2xl font-semibold tracking-tight">关键指标</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="card dark:card-dark bg-white dark:bg-neutral-800 p-5">
+          <div class="text-sm text-neutral-500 dark:text-neutral-400">女性劳动参与率（1990）</div>
+          <div class="mt-2 text-3xl font-semibold">79.39%</div>
+        </div>
+        <div class="card dark:card-dark bg-white dark:bg-neutral-800 p-5">
+          <div class="text-sm text-neutral-500 dark:text-neutral-400">女性劳动参与率（2019）</div>
+          <div class="mt-2 text-3xl font-semibold">68.57%</div>
+        </div>
+        <div class="card dark:card-dark bg-white dark:bg-neutral-800 p-5">
+          <div class="text-sm text-neutral-500 dark:text-neutral-400">女性董事比例（中国）</div>
+          <div class="mt-2 text-3xl font-semibold">13.8%</div>
+        </div>
+        <div class="card dark:card-dark bg-white dark:bg-neutral-800 p-5">
+          <div class="text-sm text-neutral-500 dark:text-neutral-400">女性企业家比例（中国，2021）</div>
+          <div class="mt-2 text-3xl font-semibold">29.7%</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 可视化：劳动参与率变化 -->
+    <section id="viz-lfp" class="space-y-4">
+      <h2 class="text-2xl font-semibold tracking-tight">女性劳动参与率变化（1990-2019）</h2>
+      <div class="card dark:card-dark bg-white dark:bg-neutral-800 p-4">
+        <div id="chartLfp" style="height:320px;"></div>
+      </div>
+    </section>
+
+    <!-- 可视化：女性董事比例对比 -->
+    <section id="viz-board" class="space-y-4">
+      <h2 class="text-2xl font-semibold tracking-tight">女性董事比例对比</h2>
+      <div class="card dark:card-dark bg-white dark:bg-neutral-800 p-4">
+        <div id="chartBoard" style="height:320px;"></div>
+      </div>
+    </section>
+
+    <!-- 可视化：受教育程度与平均生育子女数 -->
+    <section id="viz-fertility-education" class="space-y-4">
+      <h2 class="text-2xl font-semibold tracking-tight">受教育程度与平均生育子女数</h2>
+      <div class="card dark:card-dark bg-white dark:bg-neutral-800 p-4">
+        <div id="chartFertilityEdu" style="height:360px;"></div>
+      </div>
+    </section>
+
+    <!-- 章节概览（简化原文结构，保留核心信息） -->
+    <section id="sections" class="space-y-6">
+      <h2 class="text-2xl font-semibold tracking-tight">章节概览</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <article class="card dark:card-dark bg-white dark:bg-neutral-800 p-6 space-y-2">
+          <h3 class="text-xl font-semibold">女性受教育程度与性别比较</h3>
+          <p>高等教育结构中，大专与博士男性占比高，本科与硕士女性占比高。总体性别差距在年轻群体中趋于缩小，女性受教育水平持续提升。</p>
+        </article>
+        <article class="card dark:card-dark bg-white dark:bg-neutral-800 p-6 space-y-2">
+          <h3 class="text-xl font-semibold">中国女性就业情况</h3>
+          <p>女性劳动参与率长期高于世界平均，近年来受经济转型、育儿责任增加、教育年限延长等因素影响呈下降趋势。按另一口径，15岁以上女性就业率在主要国家中较高。</p>
+        </article>
+        <article class="card dark:card-dark bg-white dark:bg-neutral-800 p-6 space-y-2">
+          <h3 class="text-xl font-semibold">薪资与性别工资差距</h3>
+          <p>女性平均薪资增长较快，性别薪酬差异有所收敛，但在教育培训、专业服务、制药医疗等女性占比高的行业，差异仍偏高。</p>
+        </article>
+        <article class="card dark:card-dark bg-white dark:bg-neutral-800 p-6 space-y-2">
+          <h3 class="text-xl font-semibold">女性职业发展与综合地位</h3>
+          <p>全球性别平等指数显示中国排名提升，但在教育均等方面仍需改善。女性董事比例低于欧洲多数国家，女性企业家比例中等。</p>
+        </article>
+        <article class="card dark:card-dark bg-white dark:bg-neutral-800 p-6 space-y-2 md:col-span-2">
+          <h3 class="text-xl font-semibold">生育相关性与职场影响</h3>
+          <p>生育与就业存在冲突，子女数量与女性就业几率、工资水平呈负相关。受教育程度越高，平均生育子女数越低（博士略高于硕士，与本科接近）。</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- 政策建议（原文十大建议） -->
+    <section id="policy" class="space-y-4">
+      <h2 class="text-2xl font-semibold tracking-tight">政策建议</h2>
+      <div class="card dark:card-dark bg-white dark:bg-neutral-800 p-6">
+        <ol class="list-decimal pl-6 space-y-2">
+          <li>现金补贴</li>
+          <li>个税与社保减免</li>
+          <li>购房补贴</li>
+          <li>增建托儿所</li>
+          <li>同时增加父母双方的产假天数</li>
+          <li>提倡灵活办公</li>
+          <li>引进外籍保姆</li>
+          <li>扶植辅助生育技术</li>
+          <li>保障单亲家庭权益</li>
+          <li>教育改革</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- 结论 -->
+    <section id="conclusion" class="space-y-4">
+      <h2 class="text-2xl font-semibold tracking-tight">结论</h2>
+      <div class="card dark:card-dark bg-white dark:bg-neutral-800 p-6">
+        <p>通过完善福利政策与社会支持体系，构建女性友好型环境，可以在保障女性职业发展与生育需求的同时，实现人口与经济的协调发展。</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- 主题切换逻辑：默认跟随系统；用户切换后持久化到 localStorage -->
+  <script>
+    // 初始化主题：优先使用用户选择，否则跟随系统
+    (function initTheme() {
+      const user = localStorage.getItem('theme');
+      if (user === 'dark') document.documentElement.classList.add('dark');
+      else if (user === 'light') document.documentElement.classList.remove('dark');
+      else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.classList.add('dark');
+      }
+    })();
+    // 监听系统主题变化（仅当用户未手动设置时）
+    (function bindSystemThemeListener() {
+      const media = window.matchMedia('(prefers-color-scheme: dark)');
+      media.addEventListener('change', (e) => {
+        const user = localStorage.getItem('theme');
+        if (!user) {
+          if (e.matches) document.documentElement.classList.add('dark');
+          else document.documentElement.classList.remove('dark');
+        }
+      });
+    })();
+    // 切换按钮事件
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const root = document.documentElement;
+      const isDark = root.classList.contains('dark');
+      if (isDark) {
+        root.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      } else {
+        root.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      }
+    });
+  </script>
+
+  <!-- ECharts 渲染：按章节生成对应图表 -->
+  <script>
+    // 劳动参与率变化：仅展示关键年份（1990、2019）
+    (function renderLfp() {
+      const el = document.getElementById('chartLfp');
+      const chart = echarts.init(el);
+      const option = {
+        tooltip: { trigger: 'axis' },
+        xAxis: { type: 'category', data: ['1990', '2019'] },
+        yAxis: { type: 'value', axisLabel: { formatter: '{value}%' } },
+        series: [{
+          name: '女性劳动参与率',
+          type: 'line',
+          smooth: true,
+          data: [79.39, 68.57],
+          areaStyle: {},
+          lineStyle: { width: 3 }
+        }],
+        color: ['#6366f1'] // indigo-500
+      };
+      chart.setOption(option);
+      window.addEventListener('resize', () => chart.resize());
+    })();
+
+    // 女性董事比例对比：法国、中国、韩国
+    (function renderBoard() {
+      const el = document.getElementById('chartBoard');
+      const chart = echarts.init(el);
+      const option = {
+        tooltip: { trigger: 'axis' },
+        xAxis: { type: 'category', data: ['法国', '中国', '韩国'] },
+        yAxis: { type: 'value', axisLabel: { formatter: '{value}%' } },
+        series: [{
+          name: '女性董事比例',
+          type: 'bar',
+          data: [45.3, 13.8, 8.7],
+          itemStyle: { borderRadius: [6, 6, 0, 0] }
+        }],
+        color: ['#06b6d4'] // cyan-500
+      };
+      chart.setOption(option);
+      window.addEventListener('resize', () => chart.resize());
+    })();
+
+    // 受教育程度与平均生育子女数：原文数据可视化
+    (function renderFertilityEdu() {
+      const el = document.getElementById('chartFertilityEdu');
+      const chart = echarts.init(el);
+      const levels = ['小学', '初中', '高中', '大专', '本科', '硕士', '博士'];
+      const values = [1.97, 1.55, 0.94, 0.78, 0.63, 0.57, 0.63];
+      const option = {
+        tooltip: { trigger: 'axis' },
+        xAxis: { type: 'category', data: levels },
+        yAxis: { type: 'value' },
+        series: [{
+          name: '平均生育子女数',
+          type: 'bar',
+          data: values,
+          itemStyle: { borderRadius: [6, 6, 0, 0] }
+        }],
+        color: ['#10b981'] // emerald-500
+      };
+      chart.setOption(option);
+      window.addEventListener('resize', () => chart.resize());
+    })();
+  </script>
+</body>
+</html>
