@@ -161,3 +161,26 @@ public class ArraySort {
 
 
 
+![image-20260417150044774](trae学习.assets/image-20260417150044774.png)
+
+
+
+![image-20260417151118793](trae学习.assets/image-20260417151118793.png)
+
+
+
+
+
+![image-20260417151238094](trae学习.assets/image-20260417151238094.png)
+
+
+
+![image-20260417151854643](trae学习.assets/image-20260417151854643.png)
+
+
+
+# 05-内置智能体
+
+
+
+![image-20260417152019039](trae学习.assets/image-20260417152019039.png)
