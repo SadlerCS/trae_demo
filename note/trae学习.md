@@ -184,3 +184,29 @@ public class ArraySort {
 
 
 ![image-20260417152019039](trae学习.assets/image-20260417152019039.png)
+
+
+
+
+
+
+
+![image-20260417152204445](trae学习.assets/image-20260417152204445.png)
+
+![image-20260417152249315](trae学习.assets/image-20260417152249315.png)
+
+
+
+
+
+![image-20260417152955482](trae学习.assets/image-20260417152955482.png)
+
+
+
+![image-20260417153319946](trae学习.assets/image-20260417153319946.png)
+
+# 06-SOLO模式(大众点评网)
+
+
+
+![image-20260417153505514](trae学习.assets/image-20260417153505514.png)
