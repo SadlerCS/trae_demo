@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>冒泡排序可视化教学</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --warning-color: #f1c40f;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #2c3e50;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            max-width: 800px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #7f8c8d;
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+            width: 100%;
+            max-width: 1100px;
+        }
+
+        /* 可视化区域 */
+        .visualizer-card {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .array-container {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            height: 300px;
+            width: 100%;
+            margin-bottom: 40px;
+            padding: 10px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .bar {
+            width: 40px;
+            margin: 0 5px;
+            background-color: var(--primary-color);
+            border-radius: 5px 5px 0 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            color: white;
+            font-weight: bold;
+            padding-top: 5px;
+            transition: height 0.3s, background-color 0.3s, transform 0.2s;
+            position: relative;
+        }
+
+        .bar.comparing { background-color: var(--warning-color); transform: scale(1.05); }
+        .bar.swapping { background-color: var(--danger-color); }
+        .bar.sorted { background-color: var(--secondary-color); }
+
+        /* 控制面板 */
+        .controls-card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .btn-primary:hover { background-color: #2980b9; }
+        .btn-primary:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+
+        .btn-outline { background-color: transparent; border: 2px solid var(--primary-color); color: var(--primary-color); }
+        .btn-outline:hover { background-color: var(--primary-color); color: white; }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .control-group label {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #7f8c8d;
+        }
+
+        input[type="range"] { width: 100%; cursor: pointer; }
+
+        /* 教育性说明 */
+        .info-card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            margin-top: 20px;
+            width: 100%;
+            max-width: 1100px;
+        }
+
+        .status-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 5px solid var(--primary-color);
+            margin-bottom: 20px;
+            min-height: 80px;
+        }
+
+        .complexity-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .complexity-item {
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .complexity-item span {
+            display: block;
+            font-size: 0.8rem;
+            color: #7f8c8d;
+        }
+
+        .complexity-item strong {
+            font-size: 1.2rem;
+            color: var(--primary-color);
+        }
+
+        @media (max-width: 768px) {
+            .main-container { grid-template-columns: 1fr; }
+            .bar { width: 25px; margin: 0 2px; font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🫧 冒泡排序动画演示</h1>
+        <p>冒泡排序（Bubble Sort）是一种简单的排序算法。它重复地走访过要排序的数列，一次比较两个元素，如果它们的顺序错误就把它们交换过来。</p>
+    </div>
+
+    <div class="main-container">
+        <!-- 可视化区域 -->
+        <div class="visualizer-card">
+            <div class="status-box" id="statusMessage">
+                点击“开始排序”按钮，观察冒泡排序的过程。
+            </div>
+            <div class="array-container" id="arrayContainer">
+                <!-- 条形图将由 JS 生成 -->
+            </div>
+        </div>
+
+        <!-- 控制面板 -->
+        <div class="controls-card">
+            <div class="control-group">
+                <button class="btn btn-primary" id="startBtn">开始排序</button>
+            </div>
+            <div class="control-group">
+                <button class="btn btn-outline" id="resetBtn">生成新数据</button>
+            </div>
+            <div class="control-group">
+                <label>动画速度</label>
+                <input type="range" id="speedRange" min="50" max="1000" step="50" value="400">
+            </div>
+            <div class="control-group">
+                <label>数据量</label>
+                <input type="range" id="sizeRange" min="5" max="20" step="1" value="10">
+            </div>
+        </div>
+    </div>
+
+    <!-- 教育说明 -->
+    <div class="info-card">
+        <h3>算法百科</h3>
+        <p>之所以叫“冒泡排序”，是因为越小的元素会经由交换慢慢“浮”到数列的顶端（升序情况下），就像碳酸饮料中二氧化碳气泡最终会上浮到顶端一样。</p>
+        
+        <div class="complexity-grid">
+            <div class="complexity-item">
+                <span>平均时间复杂度</span>
+                <strong>O(n²)</strong>
+            </div>
+            <div class="complexity-item">
+                <span>最好时间复杂度</span>
+                <strong>O(n)</strong>
+            </div>
+            <div class="complexity-item">
+                <span>最坏时间复杂度</span>
+                <strong>O(n²)</strong>
+            </div>
+            <div class="complexity-item">
+                <span>空间复杂度</span>
+                <strong>O(1)</strong>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * 冒泡排序可视化实现
+         */
+        const container = document.getElementById('arrayContainer');
+        const statusMsg = document.getElementById('statusMessage');
+        const startBtn = document.getElementById('startBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const speedRange = document.getElementById('speedRange');
+        const sizeRange = document.getElementById('sizeRange');
+
+        let array = [];
+        let isSorting = false;
+
+        // 初始化
+        function init() {
+            generateArray(parseInt(sizeRange.value));
+            addEventListeners();
+        }
+
+        // 生成随机数组并创建 DOM 元素
+        function generateArray(size) {
+            container.innerHTML = '';
+            array = [];
+            for (let i = 0; i < size; i++) {
+                const value = Math.floor(Math.random() * 90) + 10;
+                array.push(value);
+                
+                const bar = document.createElement('div');
+                bar.classList.add('bar');
+                bar.style.height = `${value * 3}px`;
+                bar.innerText = value;
+                bar.id = `bar-${i}`;
+                container.appendChild(bar);
+            }
+            statusMsg.innerText = `生成了 ${size} 个随机数。准备开始排序！`;
+        }
+
+        // 延迟函数
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, 1050 - ms));
+        }
+
+        // 更新状态消息
+        function updateStatus(msg) {
+            statusMsg.innerHTML = msg;
+        }
+
+        // 冒泡排序逻辑
+        async function bubbleSort() {
+            isSorting = true;
+            disableControls(true);
+            const n = array.length;
+            const bars = document.getElementsByClassName('bar');
+
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n - i - 1; j++) {
+                    // 1. 标记正在比较的两个元素
+                    bars[j].classList.add('comparing');
+                    bars[j+1].classList.add('comparing');
+                    updateStatus(`正在比较 <strong>${array[j]}</strong> 和 <strong>${array[j+1]}</strong>`);
+                    
+                    await sleep(speedRange.value);
+
+                    // 2. 如果前一个比后一个大，交换
+                    if (array[j] > array[j+1]) {
+                        updateStatus(`发现 <strong>${array[j]} > ${array[j+1]}</strong>，进行交换！`);
+                        bars[j].classList.add('swapping');
+                        bars[j+1].classList.add('swapping');
+
+                        // 交换数组值
+                        [array[j], array[j+1]] = [array[j+1], array[j]];
+
+                        // 更新 DOM 高度和文本
+                        await sleep(speedRange.value / 2);
+                        bars[j].style.height = `${array[j] * 3}px`;
+                        bars[j].innerText = array[j];
+                        bars[j+1].style.height = `${array[j+1] * 3}px`;
+                        bars[j+1].innerText = array[j+1];
+                        
+                        await sleep(speedRange.value / 2);
+                        bars[j].classList.remove('swapping');
+                        bars[j+1].classList.remove('swapping');
+                    } else {
+                        updateStatus(`顺序正确，无需交换。`);
+                    }
+
+                    // 3. 移除比较标记
+                    bars[j].classList.remove('comparing');
+                    bars[j+1].classList.remove('comparing');
+                }
+
+                // 4. 每一轮结束，最大的元素已沉底，标记为已排序
+                bars[n - i - 1].classList.add('sorted');
+                updateStatus(`第 ${i+1} 轮结束，<strong>${array[n-i-1]}</strong> 已到达正确位置。`);
+            }
+
+            updateStatus('🎉 排序完成！所有气泡都已归位。');
+            isSorting = false;
+            disableControls(false);
+        }
+
+        // 禁用/启用按钮
+        function disableControls(disabled) {
+            startBtn.disabled = disabled;
+            resetBtn.disabled = disabled;
+            sizeRange.disabled = disabled;
+        }
+
+        // 事件监听
+        function addEventListeners() {
+            startBtn.addEventListener('click', bubbleSort);
+            
+            resetBtn.addEventListener('click', () => {
+                generateArray(parseInt(sizeRange.value));
+            });
+
+            sizeRange.addEventListener('input', () => {
+                generateArray(parseInt(sizeRange.value));
+            });
+        }
+
+        init();
+    </script>
+</body>
+</html>
