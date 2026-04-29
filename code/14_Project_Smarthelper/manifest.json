@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "智能文本助手",
+  "version": "0.1.0",
+  "description": "选中文本快速翻译与朗读（Kimi API + 浏览器朗读）",
+  "permissions": ["storage", "tts"],
+  "host_permissions": ["https://*/*", "http://*/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "智能文本助手",
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html",
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["contentScript.js"],
+      "css": ["contentStyles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["config/config.json"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
+

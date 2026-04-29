@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>坦克大战小游戏</title>
+  <style>
+    :root {
+      --bg: #efefef;
+      --panel-bg: #ffffff;
+      --text: #222;
+      --accent: #2b7dfa;
+      --danger: #e74c3c;
+      --success: #2ecc71;
+      --obstacle: #666666;
+    }
+    html, body {
+      height: 100%;
+    }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, "Microsoft Yahei", "Hiragino Sans GB", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wrapper {
+      width: 900px;
+      max-width: 95vw;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+    }
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: 0.5px;
+      color: var(--accent);
+    }
+    .topbar {
+      width: 800px;
+      max-width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #444;
+    }
+    .score {
+      font-weight: 600;
+    }
+    .hint {
+      font-size: 12px;
+      color: #666;
+    }
+    .game-panel {
+      position: relative;
+      width: 800px;
+      height: 600px;
+      background: var(--panel-bg);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      width: 800px;
+      height: 600px;
+    }
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .gameover-text {
+      color: #fff;
+      font-size: 36px;
+      font-weight: 700;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+    }
+    .btn {
+      padding: 10px 18px;
+      font-size: 14px;
+      border: none;
+      border-radius: 6px;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      transition: transform 0.05s ease, box-shadow 0.2s ease;
+      box-shadow: 0 4px 12px rgba(43,125,250,0.35);
+    }
+    .btn:active {
+      transform: translateY(1px);
+      box-shadow: 0 2px 8px rgba(43,125,250,0.25);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <h1>坦克大战小游戏</h1>
+    <div class="topbar">
+      <div class="score">得分：<span id="scoreValue">0</span></div>
+      <div class="hint">操作：方向键移动，空格发射</div>
+    </div>
+    <div class="game-panel">
+      <canvas id="gameCanvas" width="800" height="600"></canvas>
+      <div id="overlay" class="overlay">
+        <div class="gameover-text">Game Over</div>
+        <button id="restartBtn" class="btn">重新开始</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('scoreValue');
+    const overlayEl = document.getElementById('overlay');
+    const restartBtn = document.getElementById('restartBtn');
+
+    const W = canvas.width;
+    const H = canvas.height;
+    const BARREL_WIDTH = 6;
+    const BARREL_LENGTH = 18;
+    const BARREL_COLOR_PLAYER = '#1e9e5a';
+    const BARREL_COLOR_ENEMY = '#b8322a';
+
+    const player = {
+      x: W / 2 - 16,
+      y: H - 64,
+      w: 32,
+      h: 32,
+      speed: 220,
+      color: '#2ecc71',
+      facing: { x: 0, y: -1 },
+      lastShotAt: 0,
+      shotCooldownMs: 300
+    };
+
+    const obstacles = [
+      { x: 180, y: 160, w: 80, h: 20 },
+      { x: 560, y: 160, w: 80, h: 20 },
+      { x: 360, y: 280, w: 80, h: 80 },
+      { x: 180, y: 420, w: 140, h: 20 },
+      { x: 520, y: 420, w: 140, h: 20 }
+    ];
+
+    const bullets = [];
+    const enemies = [];
+    const explosions = [];
+
+    let score = 0;
+    let gameOver = false;
+
+    const keys = {
+      ArrowUp: false,
+      ArrowDown: false,
+      ArrowLeft: false,
+      ArrowRight: false,
+      Space: false
+    };
+
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
+    }
+    function rectsIntersect(a, b) {
+      return !(a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y);
+    }
+    function collidesAnyObstacle(r) {
+      for (let i = 0; i < obstacles.length; i++) {
+        if (rectsIntersect(r, obstacles[i])) return true;
+      }
+      return false;
+    }
+    function tryMoveEntity(e, dx, dy) {
+      let nx = clamp(e.x + dx, 0, W - e.w);
+      let rx = { x: nx, y: e.y, w: e.w, h: e.h };
+      if (collidesAnyObstacle(rx)) nx = e.x;
+      let ny = clamp(e.y + dy, 0, H - e.h);
+      let ry = { x: nx, y: ny, w: e.w, h: e.h };
+      if (collidesAnyObstacle(ry)) ny = e.y;
+      const movedX = nx !== e.x;
+      const movedY = ny !== e.y;
+      e.x = nx;
+      e.y = ny;
+      return movedX || movedY;
+    }
+
+    function addBullet(x, y, dirX, dirY, owner) {
+      let len = Math.hypot(dirX, dirY);
+      if (len === 0) {
+        dirX = 0; dirY = -1; len = 1;
+      }
+      const nx = dirX / len;
+      const ny = dirY / len;
+      bullets.push({
+        x: x, y: y, w: 6, h: 6,
+        vx: nx * 420, vy: ny * 420,
+        owner,
+        color: owner === 'player' ? '#f1c40f' : '#ff8c42'
+      });
+    }
+
+    function spawnEnemyAt(x, y) {
+      enemies.push({
+        x, y, w: 30, h: 30,
+        speed: 150,
+        color: '#e74c3c',
+        dir: randomDir(),
+        nextDirChangeAt: performance.now() + 800 + Math.random() * 1400,
+        lastShotAt: 0,
+        alive: true,
+        respawnAt: 0
+      });
+    }
+    function randomDir() {
+      const dirs = [
+        { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }
+      ];
+      return dirs[Math.floor(Math.random() * dirs.length)];
+    }
+    function randomSpawn() {
+      const candidates = [
+        { x: 40, y: 40 },
+        { x: W - 90, y: 40 },
+        { x: 40, y: H - 90 },
+        { x: W - 90, y: H - 90 }
+      ];
+      for (let i = 0; i < candidates.length; i++) {
+        const c = candidates[i];
+        const rect = { x: c.x, y: c.y, w: 30, h: 30 };
+        if (!collidesAnyObstacle(rect)) return c;
+      }
+      return { x: 20, y: 20 };
+    }
+
+    function resetGame() {
+      score = 0;
+      scoreEl.textContent = String(score);
+      gameOver = false;
+      overlayEl.style.display = 'none';
+      player.x = W / 2 - 16;
+      player.y = H - 64;
+      player.facing = { x: 0, y: -1 };
+      bullets.length = 0;
+      enemies.length = 0;
+      explosions.length = 0;
+      const s1 = randomSpawn();
+      const s2 = randomSpawn();
+      const s3 = randomSpawn();
+      spawnEnemyAt(s1.x, s1.y);
+      spawnEnemyAt(s2.x, s2.y);
+      spawnEnemyAt(s3.x, s3.y);
+    }
+
+    function handlePlayerInput(dt) {
+      let dx = 0, dy = 0;
+      if (keys.ArrowLeft) dx -= 1;
+      if (keys.ArrowRight) dx += 1;
+      if (keys.ArrowUp) dy -= 1;
+      if (keys.ArrowDown) dy += 1;
+      if (dx !== 0 || dy !== 0) {
+        const len = Math.hypot(dx, dy);
+        dx = dx / len;
+        dy = dy / len;
+        tryMoveEntity(player, dx * player.speed * dt, dy * player.speed * dt);
+      }
+    }
+
+    function updateFacing(e) {
+      if (keys.ArrowLeft) e.facing = { x: -1, y: 0 };
+      else if (keys.ArrowRight) e.facing = { x: 1, y: 0 };
+      else if (keys.ArrowUp) e.facing = { x: 0, y: -1 };
+      else if (keys.ArrowDown) e.facing = { x: 0, y: 1 };
+    }
+
+    function playerTryShoot(now) {
+      if (!keys.Space) return;
+      if (now - player.lastShotAt < player.shotCooldownMs) return;
+      player.lastShotAt = now;
+      const cpx = player.x + player.w / 2;
+      const cpy = player.y + player.h / 2;
+      const offset = Math.max(player.w, player.h) / 2 + BARREL_LENGTH;
+      const bx = cpx + player.facing.x * offset - 3;
+      const by = cpy + player.facing.y * offset - 3;
+      addBullet(bx, by, player.facing.x, player.facing.y, 'player');
+    }
+
+    function updateEnemies(now, dt) {
+      for (let i = 0; i < enemies.length; i++) {
+        const e = enemies[i];
+        if (!e.alive) {
+          if (now >= e.respawnAt) {
+            const pos = randomSpawn();
+            e.x = pos.x; e.y = pos.y;
+            e.dir = randomDir();
+            e.alive = true;
+            e.nextDirChangeAt = now + 800 + Math.random() * 1400;
+          }
+          continue;
+        }
+        if (now >= e.nextDirChangeAt) {
+          e.dir = randomDir();
+          e.nextDirChangeAt = now + 800 + Math.random() * 1400;
+        }
+        const moved = tryMoveEntity(e, e.dir.x * e.speed * dt, e.dir.y * e.speed * dt);
+        if (!moved) {
+          e.dir = randomDir();
+        }
+        if (Math.random() < 0.01) {
+          let sx = e.dir.x, sy = e.dir.y;
+          if (sx === 0 && sy === 0) {
+            sx = (player.x + player.w / 2) - (e.x + e.w / 2);
+            sy = (player.y + player.h / 2) - (e.y + e.h / 2);
+          }
+          const ecx = e.x + e.w / 2;
+          const ecy = e.y + e.h / 2;
+          const eOffset = Math.max(e.w, e.h) / 2 + BARREL_LENGTH;
+          const bx = ecx + sx * eOffset - 3;
+          const by = ecy + sy * eOffset - 3;
+          addBullet(bx, by, sx, sy, 'enemy');
+        }
+      }
+    }
+
+    function spawnExplosion(cx, cy, count = 22) {
+      const palette = ['#ffb703', '#fb8500', '#e63946', '#ffd166'];
+      for (let i = 0; i < count; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const spd = 80 + Math.random() * 220;
+        const size = 3 + Math.random() * 5;
+        const life = 0.5 + Math.random() * 0.5;
+        explosions.push({
+          x: cx, y: cy,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd,
+          age: 0,
+          life,
+          size,
+          color: palette[Math.floor(Math.random() * palette.length)]
+        });
+      }
+    }
+    function updateExplosions(dt) {
+      for (let i = explosions.length - 1; i >= 0; i--) {
+        const p = explosions[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.age += dt;
+        if (p.age >= p.life) explosions.splice(i, 1);
+      }
+    }
+
+    function updateBullets(dt) {
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+        b.x += b.vx * dt;
+        b.y += b.vy * dt;
+        const br = { x: b.x, y: b.y, w: b.w, h: b.h };
+        if (b.x < -10 || b.y < -10 || b.x > W + 10 || b.y > H + 10) {
+          bullets.splice(i, 1);
+          continue;
+        }
+        if (collidesAnyObstacle(br)) {
+          bullets.splice(i, 1);
+          continue;
+        }
+        if (b.owner === 'player') {
+          for (let j = 0; j < enemies.length; j++) {
+            const e = enemies[j];
+            if (!e.alive) continue;
+            const er = { x: e.x, y: e.y, w: e.w, h: e.h };
+            if (rectsIntersect(br, er)) {
+              spawnExplosion(e.x + e.w / 2, e.y + e.h / 2, 24);
+              e.alive = false;
+              e.respawnAt = performance.now() + 2000;
+              bullets.splice(i, 1);
+              score += 1;
+              scoreEl.textContent = String(score);
+              break;
+            }
+          }
+        } else {
+          const pr = { x: player.x, y: player.y, w: player.w, h: player.h };
+          if (rectsIntersect(br, pr)) {
+            spawnExplosion(player.x + player.w / 2, player.y + player.h / 2, 28);
+            gameOver = true;
+            overlayEl.style.display = 'flex';
+            bullets.splice(i, 1);
+          }
+        }
+      }
+    }
+
+    function drawBarrel(cx, cy, dirX, dirY, color) {
+      const len = Math.hypot(dirX, dirY) || 1;
+      const nx = dirX / len;
+      const ny = dirY / len;
+      const ang = Math.atan2(ny, nx);
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(ang);
+      ctx.fillStyle = color;
+      ctx.fillRect(0, -BARREL_WIDTH / 2, BARREL_LENGTH, BARREL_WIDTH);
+      ctx.restore();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#f9f9f9';
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#999';
+      ctx.fillRect(0, 0, W, 16);
+      ctx.fillStyle = '#999';
+      ctx.fillRect(0, H - 16, W, 16);
+      ctx.fillStyle = '#ddd';
+      ctx.fillRect(0, 16, W, H - 32);
+      ctx.fillStyle = '#666';
+      for (let i = 0; i < obstacles.length; i++) {
+        const o = obstacles[i];
+        ctx.fillRect(o.x, o.y, o.w, o.h);
+      }
+      ctx.fillStyle = player.color;
+      ctx.fillRect(player.x, player.y, player.w, player.h);
+      drawBarrel(
+        player.x + player.w / 2,
+        player.y + player.h / 2,
+        player.facing.x,
+        player.facing.y,
+        BARREL_COLOR_PLAYER
+      );
+      for (let i = 0; i < enemies.length; i++) {
+        const e = enemies[i];
+        if (!e.alive) continue;
+        ctx.fillStyle = e.color;
+        ctx.fillRect(e.x, e.y, e.w, e.h);
+        drawBarrel(
+          e.x + e.w / 2,
+          e.y + e.h / 2,
+          e.dir.x,
+          e.dir.y,
+          BARREL_COLOR_ENEMY
+        );
+      }
+      for (let i = 0; i < bullets.length; i++) {
+        const b = bullets[i];
+        ctx.fillStyle = b.color;
+        ctx.fillRect(b.x, b.y, b.w, b.h);
+      }
+      for (let i = 0; i < explosions.length; i++) {
+        const p = explosions[i];
+        const alpha = 1 - p.age / p.life;
+        if (alpha <= 0) continue;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    let lastTime = performance.now();
+    function loop(now) {
+      const dt = Math.min(0.033, (now - lastTime) / 1000);
+      lastTime = now;
+      if (!gameOver) {
+        handlePlayerInput(dt);
+        updateFacing(player);
+        playerTryShoot(now);
+        updateEnemies(now, dt);
+        updateBullets(dt);
+      }
+      updateExplosions(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        keys.Space = true;
+      } else {
+        const k = e.key;
+        if (k in keys) keys[k] = true;
+      }
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'Space') {
+        keys.Space = false;
+      } else {
+        const k = e.key;
+        if (k in keys) keys[k] = false;
+      }
+    });
+
+    restartBtn.addEventListener('click', () => {
+      resetGame();
+    });
+
+    resetGame();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
